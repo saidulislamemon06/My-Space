@@ -1,0 +1,62 @@
+
+name: Build My Space Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract source ZIP
+        run: |
+          unzip -q My_Space_GitHub_Android_Build_Ready.zip
+          test -f My_Space_Phase_6_Real_Backend_Integration/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        working-directory: My_Space_Phase_6_Real_Backend_Integration
+        run: npm install --no-audit --no-fund
+
+      - name: Run release checks
+        working-directory: My_Space_Phase_6_Real_Backend_Integration
+        run: npm run web:check
+
+      - name: Add Android
+        working-directory: My_Space_Phase_6_Real_Backend_Integration
+        run: npx cap add android
+
+      - name: Sync Android
+        working-directory: My_Space_Phase_6_Real_Backend_Integration
+        run: npx cap sync android
+
+      - name: Build APK
+        working-directory: My_Space_Phase_6_Real_Backend_Integration/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: My-Space-debug-apk
+          path: My_Space_Phase_6_Real_Backend_Integration/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
